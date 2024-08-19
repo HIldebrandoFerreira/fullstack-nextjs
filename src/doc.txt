@@ -1,0 +1,72 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+SHOW_PERSON_PORTRAIT()
+LAYOUT_AS_SKETCH()
+
+Person(personCliente, "Cliente Fibra", "Acessa o AP Vivo")
+
+System_Boundary(aliasFront, "Front End"){    
+    Container(containerFront, "Front End da Jornada de troca de plano", "htt/json", "catálogo e checkout")
+    Container(containerBFF, "BFF da Jornada de troca de plano", "htt/json", "api em nodejs/javascript")
+}
+
+System_Boundary(aliasAPP, "Serviços de Back end AP Vivo"){    
+    Container(containerOffers, "Product Offers", "htt/json", "Consultar ofertas")
+    Container(containerBCM, "Billing Cycle Management", "htt/json", "Consulta datas aceitas pela amdocs para ser usada como data de vencimento")
+    Container(containerBC, "Billing Cycle", "htt/json", "Consultar a data de vencimento atual do cliente (para clientes Next)")
+    Container(containerVideo, "Video Package", "htt/json", "Consultar quais canis estão atrelados a uma oferta de TV")
+    Container(containerPM, "Product Management", "htt/json", "Envia pedido de troca a PMA")
+    Container(containerPMA, "Product Management Admin", "htt/json", "Prepara a trassação e solicita a troca de plano")
+    Container(containerWOA, "Work Order Appointment", "htt/json", "Api que retorna datas para instalação")
+    
+    Container(containerSP, "Subscribed Products", "htt/json", "Prepara dados de posse do cliente")
+}
+
+System_Boundary(aliasDB, "Banco de dados") {
+    ContainerDb(dbMongo, "MongoDb", "Armazena ofertas e solicitações de trasação de troca de plano")
+}
+
+System_Boundary(aliasLegados, "Sistemas envolvidos - que suportam a solução do APP"){    
+    Container_Ext(aliasRTD, "RTD", "real time decison", "Sistema responsável por decidir que ofertas serão retornadas para cada cliente")
+    Container_Ext(aliasMotor, "Motor", "BD", "Sistema onde equipe de negocio envia as ofertas para serem cadastras, exite motores de oferta de vários tipos como por ex: retenção ou troca")
+    Container_Ext(aliasHybris, "Hybris", "CRM", "CRM responsável por gerar o pedido de troca e enviar o memo ao lead para encaminhar a equipe de BKO")
+    Container_Ext(aliasASB, "ASB", "technology", "Serviço que impede pedidos duplicados e envia o pedido para ser processado pelo equipe de BKO")
+    Container_Ext(aliasBKO, "BKO", "technology", "Equipe responsável por efetivar a torca de plano do cliente de forma manual")
+    Container_Ext(aliasAMD, "AMDOCS", "CRM", "CRM que armazena as infromações do cliente, como posse e solicitações de troca ou aquisiçaõ")
+    Container_Ext(aliasSiebel, "Siebel", "CRM", "CRM que armazena as infromações do cliente, como posse e solicitações de troca ou aquisiçaõ")
+}
+
+System_Boundary(aliasBackOffice, "BackOffice"){
+    Person_Ext(personBko, "BKO", "Efetua a troca de plano solicitada pelo Ciente")
+}
+
+Rel(personCliente, containerFront, "Entra na jornada de troca de plano ", "http/json")
+Rel(containerFront, containerBFF, "Requisita dados de posse, ofertas, datas de vecimento e requisita a troa de plano através do BFF", "http/json")
+Rel(containerBFF, containerOffers, "Solicta ofertas de upograde de velocidade", "http/json")
+Rel(containerBFF, containerSP, "Consulta posse do cliente", "http/json")
+
+Rel(containerSP, aliasAMD, "Buscar dados de posse do cliente", "http/json")
+Rel(containerSP, aliasSiebel, "Buscar dados de posse do cliente", "http/json")
+
+Rel(containerOffers, aliasRTD, "Buscar ofertas de upgrade de velocidade", "http/json")
+Rel(containerOffers, dbMongo, "Armazena ofertas", "http/json")
+Rel(containerBFF, containerBC, "Consulta data de vecimento atual", "http/json")
+Rel(containerBFF, containerBCM, "Consulta as datas de vencimento existentes", "http/json")
+Rel(containerBFF, containerVideo, "Consulta a lista de canais que existe na TV existe na oferta de upgrade", "http/json")
+Rel(containerBFF, containerPM, "Solicita a troca do plano atual pela oferta escolhida", "http/json")
+Rel(containerBFF, containerWOA, "Buscar datas de instação", "http/json")
+
+Rel(containerBC, aliasAMD, "Recupera a data de vencimento atual do cliente na", "html/json")
+Rel(containerBCM, aliasAMD, "Recupera as datas de vencimento permitidas pela", "html/json")
+Rel(containerVideo, aliasHybris, "Consulta catálogo de canais de tvs", "http/json" )
+Rel(containerPM, containerPMA, "Solicita troca de Plano", "http/json" )
+Rel(containerPMA, aliasHybris, "Solicita troca de Plano", "http/json" )
+Rel(containerPMA, dbMongo, "Recupera e armazena dados de oferta e solicitação de troca", "http/json" )
+
+Rel(aliasRTD, aliasMotor, "Exrtai ofertas do", "extract/ETL")
+Rel(containerOffers, aliasHybris, "Buscar detalhes da oferta retornada pelo RTD", "http/json")
+Rel(aliasHybris, aliasASB, "Envia o pedido ao", "extract/ETL")
+Rel(aliasASB, aliasBKO, "Envia pedido de troca para se efetivado por")
+Rel(personBko, aliasBKO, "Processa pedido recebido")
+@enduml
